@@ -11,7 +11,7 @@
 {{- end}}
 
 {{$c := 16}}
-{{if eq .Name "secp256k1"}}
+{{if or (eq .Name "secp256k1") (eq .Name "secq256k1") }}
     {{$c = 15}}
 {{end}}
 
@@ -800,7 +800,7 @@ func fuzz{{ $TJacobianExtended }}(p *{{ $TJacobianExtended }}, f {{ .CoordType}}
 	return res
 }
 
-{{- if eq .Name "secp256k1"}}
+{{- if or (eq .Name "secp256k1") (eq .Name "secq256k1") }}
 const (
        nbFuzzShort = 10
        nbFuzz      = 100

@@ -433,7 +433,7 @@ func (p *{{ $TJacobian }}) IsOnCurve() bool {
 
 
 
-{{- if or (eq .Name "bn254") (eq .Name "secp256k1")}}
+{{- if or (eq .Name "bn254") (eq .Name "secp256k1") (eq .Name "secq256k1") }}
 	{{- if eq .PointName "g1"}}
 		// IsInSubGroup returns true if p is on the r-torsion, false otherwise.
         // the curve is of prime order i.e. E(𝔽p) is the full group

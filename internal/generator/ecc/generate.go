@@ -165,7 +165,7 @@ func Generate(conf config.Curve, baseDir string, bgen *bavard.BatchGenerator) er
 	}
 
 	// No G2 for secp256k1
-	if conf.Equal(config.SECP256K1) {
+	if conf.Equal(config.SECP256K1) || conf.Equal(config.SECQ256K1) {
 		return nil
 	}
 

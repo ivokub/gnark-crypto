@@ -74,7 +74,7 @@ func main() {
 			// generate G1, G2, multiExp, ...
 			assertNoError(ecc.Generate(conf, curveDir, bgen))
 
-			if conf.Equal(config.SECP256K1) {
+			if conf.Equal(config.SECP256K1) || conf.Equal(config.SECQ256K1) {
 				return
 			}
 

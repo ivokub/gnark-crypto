@@ -20,6 +20,8 @@
 	"github.com/consensys/gnark-crypto/ecc/bls24-317/fr"
 {{ else if eq .Name "secp256k1"}}
 	"github.com/consensys/gnark-crypto/ecc/secp256k1/fr"
+{{ else if eq .Name "secq256k1"}}
+	"github.com/consensys/gnark-crypto/ecc/secq256k1/fr"
 {{end}}
 
 {{end}}
@@ -45,6 +47,8 @@
 	curve "github.com/consensys/gnark-crypto/ecc/bls24-317"
 {{ else if eq .Name "secp256k1"}}
 	curve "github.com/consensys/gnark-crypto/ecc/secp256k1"
+{{ else if eq .Name "secq256k1"}}
+	curve "github.com/consensys/gnark-crypto/ecc/secq256k1"
 {{end}}
 
 
