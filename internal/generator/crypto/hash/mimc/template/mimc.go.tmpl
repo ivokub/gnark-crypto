@@ -25,6 +25,8 @@ const (
 	mimcNbRounds = 136
 {{- else if or (eq .Name "bw6-761") (eq .Name "bw6-756")}}
 	mimcNbRounds = 163
+{{- else}}
+	mimcNbRounds = 110
 {{- end}}
 	seed = "seed" 		 // seed to derive the constants
 	BlockSize = fr.Bytes // BlockSize size that mimc consumes
