@@ -74,6 +74,34 @@ func main() {
 			// generate G1, G2, multiExp, ...
 			assertNoError(ecc.Generate(conf, curveDir, bgen))
 
+			frInfo := config.FieldDependency{
+				FieldPackagePath: "github.com/consensys/gnark-crypto/ecc/" + conf.Name + "/fr",
+				FieldPackageName: "fr",
+				ElementType:      "fr.Element",
+			}
+
+			// generate mimc on fr
+			assertNoError(mimc.Generate(conf, filepath.Join(curveDir, "fr", "mimc"), bgen))
+
+			// generate polynomial on fr
+			assertNoError(polynomial.Generate(frInfo, filepath.Join(curveDir, "fr", "polynomial"), true, bgen))
+
+			// generate sumcheck on fr
+			assertNoError(sumcheck.Generate(frInfo, filepath.Join(curveDir, "fr", "sumcheck"), bgen))
+
+			// generate gkr on fr
+			assertNoError(gkr.Generate(gkr.Config{
+				FieldDependency:         frInfo,
+				GenerateTests:           true,
+				TestVectorsRelativePath: "../../../../internal/generator/gkr/test_vectors",
+			}, filepath.Join(curveDir, "fr", "gkr"), bgen))
+
+			// generate test vector utils on fr
+			assertNoError(test_vector_utils.Generate(test_vector_utils.Config{
+				FieldDependency:             frInfo,
+				RandomizeMissingHashEntries: false,
+			}, filepath.Join(curveDir, "fr", "test_vector_utils"), bgen))
+
 			if conf.Equal(config.SECP256K1) || conf.Equal(config.SECQ256K1) {
 				return
 			}
@@ -106,36 +134,8 @@ func main() {
 			// generate permutation on fr
 			assertNoError(permutation.Generate(conf, filepath.Join(curveDir, "fr", "permutation"), bgen))
 
-			// generate mimc on fr
-			assertNoError(mimc.Generate(conf, filepath.Join(curveDir, "fr", "mimc"), bgen))
-
-			frInfo := config.FieldDependency{
-				FieldPackagePath: "github.com/consensys/gnark-crypto/ecc/" + conf.Name + "/fr",
-				FieldPackageName: "fr",
-				ElementType:      "fr.Element",
-			}
-
-			// generate polynomial on fr
-			assertNoError(polynomial.Generate(frInfo, filepath.Join(curveDir, "fr", "polynomial"), true, bgen))
-
 			// generate eddsa on companion curves
 			assertNoError(fri.Generate(conf, filepath.Join(curveDir, "fr", "fri"), bgen))
-
-			// generate sumcheck on fr
-			assertNoError(sumcheck.Generate(frInfo, filepath.Join(curveDir, "fr", "sumcheck"), bgen))
-
-			// generate gkr on fr
-			assertNoError(gkr.Generate(gkr.Config{
-				FieldDependency:         frInfo,
-				GenerateTests:           true,
-				TestVectorsRelativePath: "../../../../internal/generator/gkr/test_vectors",
-			}, filepath.Join(curveDir, "fr", "gkr"), bgen))
-
-			// generate test vector utils on fr
-			assertNoError(test_vector_utils.Generate(test_vector_utils.Config{
-				FieldDependency:             frInfo,
-				RandomizeMissingHashEntries: false,
-			}, filepath.Join(curveDir, "fr", "test_vector_utils"), bgen))
 
 			// generate iop functions
 			assertNoError(iop.Generate(conf, filepath.Join(curveDir, "fr", "iop"), bgen))
