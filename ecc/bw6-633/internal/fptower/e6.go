@@ -556,6 +556,9 @@ func (z *E6) ExpGLV(x E6, k *big.Int) *E6 {
 		defer bigIntPool.Put(e)
 		e.Neg(k)
 	}
+	if e.Cmp(fr.Modulus()) >= 0 {
+		e.Mod(e, fr.Modulus())
+	}
 
 	var table [15]E6
 	var res E6
