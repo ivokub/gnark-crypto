@@ -88,6 +88,27 @@ func TestPairing(t *testing.T) {
 		genP,
 	))
 
+	properties.Property("[BLS12-377] Exp, ExpGLV results must be the same in GT for large exponent", prop.ForAll(
+		func(a GT, e fp.Element) bool {
+			a = FinalExponentiation(&a)
+
+			var _e, ne big.Int
+
+			_e.Lsh(big.NewInt(1), 1024)
+			ne.Neg(&_e)
+
+			var b, c GT
+			b.Exp(a, &ne)
+			b.Inverse(&b)
+			c.ExpGLV(a, &ne)
+			c.Conjugate(&c)
+
+			return b.Equal(&c)
+		},
+		genA,
+		genP,
+	))
+
 	properties.Property("[BLS12-377] Expt(Expt) and Exp(t^2) should output the same result in the cyclotomic subgroup", prop.ForAll(
 		func(a GT) bool {
 			var b, c, d GT
