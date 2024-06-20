@@ -25,9 +25,13 @@ import (
 	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark-crypto/ecc/bn254"
 	"github.com/consensys/gnark-crypto/ecc/bn254/fr"
+	"github.com/consensys/gnark-crypto/ecc/bn254/fp"
 	"github.com/consensys/gnark-crypto/fiat-shamir"
 
 	"github.com/consensys/gnark-crypto/internal/parallel"
+	iciclecore "github.com/ingonyama-zk/icicle/v2/wrappers/golang/core"
+	iciclemsm "github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bn254/msm"
+	iciclebn254 "github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bn254"
 )
 
 var (
@@ -165,6 +169,30 @@ type BatchOpeningProof struct {
 	ClaimedValues []fr.Element
 }
 
+func projectiveToGnarkAffine(p iciclebn254.Projective) (res bn254.G1Affine) {
+	px, _ := fp.LittleEndian.Element((*[fp.Bytes]byte)((&p.X).ToBytesLittleEndian()))
+	py, _ := fp.LittleEndian.Element((*[fp.Bytes]byte)((&p.Y).ToBytesLittleEndian()))
+	pz, _ := fp.LittleEndian.Element((*[fp.Bytes]byte)((&p.Z).ToBytesLittleEndian()))
+
+	var zInv fp.Element
+	zInv.Inverse(&pz)
+
+	res.X.Mul(&px, &zInv)
+	res.Y.Mul(&py, &zInv)
+
+	return res
+}
+
+func IcicleCommit(s []fr.Element, p iciclecore.DeviceSlice) (commit bn254.G1Affine) {
+	cfg := iciclemsm.GetDefaultMSMConfig()
+	cfg.AreScalarsMontgomeryForm = true
+
+	outHost := make(iciclecore.HostSlice[iciclebn254.Projective], 1)
+	iciclemsm.Msm((iciclecore.HostSlice[fr.Element])(s), p.RangeTo(len(s), false), &cfg, outHost)
+
+	return projectiveToGnarkAffine(outHost[0])
+}
+
 // Commit commits to a polynomial using a multi exponentiation with the SRS.
 // It is assumed that the polynomial is in canonical form, in Montgomery form.
 func Commit(p []fr.Element, pk ProvingKey, nbTasks ...int) (Digest, error) {
@@ -188,8 +216,8 @@ func Commit(p []fr.Element, pk ProvingKey, nbTasks ...int) (Digest, error) {
 
 // Open computes an opening proof of polynomial p at given point.
 // fft.Domain Cardinality must be larger than p.Degree()
-func Open(p []fr.Element, point fr.Element, pk ProvingKey) (OpeningProof, error) {
-	if len(p) == 0 || len(p) > len(pk.G1) {
+func Open(p []fr.Element, point fr.Element, pk iciclecore.DeviceSlice) (OpeningProof, error) {
+	if len(p) == 0 || len(p) > pk.Len() {
 		return OpeningProof{}, ErrInvalidPolynomialSize
 	}
 
@@ -205,10 +233,8 @@ func Open(p []fr.Element, point fr.Element, pk ProvingKey) (OpeningProof, error)
 	h := dividePolyByXminusA(_p, res.ClaimedValue, point)
 
 	// commit to H
-	hCommit, err := Commit(h, pk)
-	if err != nil {
-		return OpeningProof{}, err
-	}
+	hCommit := IcicleCommit(h, pk)
+	
 	res.H.Set(&hCommit)
 
 	return res, nil
@@ -262,7 +288,7 @@ func Verify(commitment *Digest, proof *OpeningProof, point fr.Element, vk Verify
 // * digests is the list of committed polynomials to open, need to derive the challenge using Fiat Shamir.
 // * polynomials is the list of polynomials to open, they are supposed to be of the same size.
 // * dataTranscript extra data that might be needed to derive the challenge used for folding
-func BatchOpenSinglePoint(polynomials [][]fr.Element, digests []Digest, point fr.Element, hf hash.Hash, pk ProvingKey, dataTranscript ...[]byte) (BatchOpeningProof, error) {
+func BatchOpenSinglePoint(polynomials [][]fr.Element, digests []Digest, point fr.Element, hf hash.Hash, pk iciclecore.DeviceSlice, dataTranscript ...[]byte) (BatchOpeningProof, error) {
 
 	// check for invalid sizes
 	nbDigests := len(digests)
@@ -273,7 +299,7 @@ func BatchOpenSinglePoint(polynomials [][]fr.Element, digests []Digest, point fr
 	// TODO ensure the polynomials are of the same size
 	largestPoly := -1
 	for _, p := range polynomials {
-		if len(p) == 0 || len(p) > len(pk.G1) {
+		if len(p) == 0 || len(p) > pk.Len() {
 			return BatchOpeningProof{}, ErrInvalidPolynomialSize
 		}
 		if len(p) > largestPoly {
@@ -342,10 +368,7 @@ func BatchOpenSinglePoint(polynomials [][]fr.Element, digests []Digest, point fr
 	h := dividePolyByXminusA(foldedPolynomials, foldedEvaluations, point)
 	foldedPolynomials = nil // same memory as h
 
-	res.H, err = Commit(h, pk)
-	if err != nil {
-		return BatchOpeningProof{}, err
-	}
+	res.H = IcicleCommit(h, pk)
 
 	return res, nil
 }

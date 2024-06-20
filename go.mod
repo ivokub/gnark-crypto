@@ -5,6 +5,7 @@ go 1.19
 require (
 	github.com/bits-and-blooms/bitset v1.7.0
 	github.com/consensys/bavard v0.1.13
+	github.com/ingonyama-zk/icicle/v2 v2.0.0-20240620074550-c92881fb7d1c
 	github.com/leanovate/gopter v0.2.9
 	github.com/mmcloughlin/addchain v0.4.0
 	github.com/spf13/cobra v1.5.0
