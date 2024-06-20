@@ -25,6 +25,8 @@ import (
 
 	"github.com/consensys/gnark-crypto/ecc/bn254/fr"
 	"github.com/consensys/gnark-crypto/ecc/bn254/fr/fft"
+	iciclecore "github.com/ingonyama-zk/icicle/v2/wrappers/golang/core"
+	iciclentt "github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bn254/ntt"
 )
 
 // Basis indicates the basis in which a polynomial is represented.
@@ -308,13 +310,18 @@ func (p *Polynomial) ToLagrange(d *fft.Domain, nbTasks ...int) *Polynomial {
 		n = nbTasks[0]
 	}
 
+	cfg := iciclentt.GetDefaultNttConfig()
+	poly := (iciclecore.HostSlice[fr.Element])(*p.coefficients)
+
 	switch id {
 	case canonicalRegular:
 		p.Layout = BitReverse
-		d.FFT((*p.coefficients), fft.DIF, fft.WithNbTasks(n))
+		cfg.Ordering = iciclecore.KNR
+		iciclentt.Ntt(poly, iciclecore.KForward, &cfg, poly)
 	case canonicalBitReverse:
 		p.Layout = Regular
-		d.FFT((*p.coefficients), fft.DIT, fft.WithNbTasks(n))
+		cfg.Ordering = iciclecore.KRN
+		iciclentt.Ntt(poly, iciclecore.KForward, &cfg, poly)
 	case lagrangeRegular, lagrangeBitReverse:
 		return p
 	case lagrangeCosetRegular:
@@ -341,15 +348,21 @@ func (p *Polynomial) ToCanonical(d *fft.Domain, nbTasks ...int) *Polynomial {
 	if len(nbTasks) > 0 {
 		n = nbTasks[0]
 	}
+
+	cfg := iciclentt.GetDefaultNttConfig()
+	poly := (iciclecore.HostSlice[fr.Element])(*p.coefficients)
+
 	switch id {
 	case canonicalRegular, canonicalBitReverse:
 		return p
 	case lagrangeRegular:
 		p.Layout = BitReverse
-		d.FFTInverse((*p.coefficients), fft.DIF, fft.WithNbTasks(n))
+		cfg.Ordering = iciclecore.KNR
+		iciclentt.Ntt(poly, iciclecore.KInverse, &cfg, poly)
 	case lagrangeBitReverse:
 		p.Layout = Regular
-		d.FFTInverse((*p.coefficients), fft.DIT, fft.WithNbTasks(n))
+		cfg.Ordering = iciclecore.KRN
+		iciclentt.Ntt(poly, iciclecore.KInverse, &cfg, poly)
 	case lagrangeCosetRegular:
 		p.Layout = BitReverse
 		d.FFTInverse((*p.coefficients), fft.DIF, fft.OnCoset(), fft.WithNbTasks(n))
