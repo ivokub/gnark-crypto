@@ -10,8 +10,8 @@ github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSs
 github.com/google/subcommands v1.2.0/go.mod h1:ZjhPrFU+Olkh9WazFPsl27BQ4UPiG37m3yTrtFlrHVk=
 github.com/inconshreveable/mousetrap v1.0.0 h1:Z8tu5sraLXCXIcARxBp/8cbvlwVa7Z1NHg9XEKhtSvM=
 github.com/inconshreveable/mousetrap v1.0.0/go.mod h1:PxqpIevigyE2G7u3NXJIT2ANytuPF1OarO4DADm73n8=
-github.com/ingonyama-zk/icicle/v2 v2.0.0-20240620074550-c92881fb7d1c h1:H49y+4oAWuAsNw2xm5Vtcj19/m2QXRigvjh1Sd/qSLw=
-github.com/ingonyama-zk/icicle/v2 v2.0.0-20240620074550-c92881fb7d1c/go.mod h1:rr3B+xKQKW1U40A+vEzA4hI2ilTrPSJBtxedfnaUYHw=
+github.com/ingonyama-zk/icicle/v2 v2.0.0-20240624112314-26dbd224b43f h1:EHNyLKfQnjhfCvLruebVzfoRmLeMZCfPlBJDs5MsVvQ=
+github.com/ingonyama-zk/icicle/v2 v2.0.0-20240624112314-26dbd224b43f/go.mod h1:rr3B+xKQKW1U40A+vEzA4hI2ilTrPSJBtxedfnaUYHw=
 github.com/kr/pretty v0.2.1/go.mod h1:ipq/a2n7PKx3OHsz4KJII5eveXtPO4qwEXGdVfWzfnI=
 github.com/kr/pretty v0.3.1 h1:flRD4NNwYAUpkphVc1HcthR4KEIFJ65n8Mw5qdRn3LE=
 github.com/kr/pretty v0.3.1/go.mod h1:hoEshYVHaxMs3cyo3Yncou5ZscifuDolrwPKZanG3xk=
