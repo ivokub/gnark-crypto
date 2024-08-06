@@ -24,14 +24,14 @@ import (
 
 	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark-crypto/ecc/bn254"
-	"github.com/consensys/gnark-crypto/ecc/bn254/fr"
 	"github.com/consensys/gnark-crypto/ecc/bn254/fp"
+	"github.com/consensys/gnark-crypto/ecc/bn254/fr"
 	"github.com/consensys/gnark-crypto/fiat-shamir"
 
 	"github.com/consensys/gnark-crypto/internal/parallel"
 	iciclecore "github.com/ingonyama-zk/icicle/v2/wrappers/golang/core"
-	iciclemsm "github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bn254/msm"
 	iciclebn254 "github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bn254"
+	iciclemsm "github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bn254/msm"
 )
 
 var (
@@ -186,6 +186,7 @@ func projectiveToGnarkAffine(p iciclebn254.Projective) (res bn254.G1Affine) {
 func IcicleCommit(s []fr.Element, p iciclecore.DeviceSlice) (commit bn254.G1Affine) {
 	cfg := iciclemsm.GetDefaultMSMConfig()
 	cfg.AreScalarsMontgomeryForm = true
+	cfg.ArePointsMontgomeryForm = true
 
 	outHost := make(iciclecore.HostSlice[iciclebn254.Projective], 1)
 	iciclemsm.Msm((iciclecore.HostSlice[fr.Element])(s), p.RangeTo(len(s), false), &cfg, outHost)
@@ -207,7 +208,7 @@ func Commit(p []fr.Element, pk ProvingKey, nbTasks ...int) (Digest, error) {
 	if len(nbTasks) > 0 {
 		config.NbTasks = nbTasks[0]
 	}
-	if _, err := res.MultiExp(pk.G1[:len(p)], p, config); err != nil {
+		if _, err := res.MultiExp(pk.G1[:len(p)], p, config); err != nil {
 		return Digest{}, err
 	}
 

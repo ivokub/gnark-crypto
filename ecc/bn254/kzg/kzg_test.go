@@ -19,10 +19,12 @@ package kzg
 import (
 	"bytes"
 	"crypto/sha256"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"fmt"
 	"math/big"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/consensys/gnark-crypto/ecc"
 	"github.com/consensys/gnark-crypto/ecc/bn254"
@@ -30,6 +32,9 @@ import (
 	"github.com/consensys/gnark-crypto/ecc/bn254/fr/fft"
 
 	"github.com/consensys/gnark-crypto/utils/testutils"
+	iciclecore "github.com/ingonyama-zk/icicle/v2/wrappers/golang/core"
+	// iciclemsm "github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bn254/msm"
+	// iciclebn254 "github.com/ingonyama-zk/icicle/v2/wrappers/golang/curves/bn254"
 )
 
 // Test SRS re-used across tests of the KZG scheme
@@ -41,6 +46,26 @@ func init() {
 	bAlpha = new(big.Int).SetInt64(42) // randomise ?
 	testSrs, _ = NewSRS(ecc.NextPowerOfTwo(srsSize), bAlpha)
 }
+
+func TestVerifyIcicleCommit(t *testing.T) {
+	// create a polynomial
+	f := randomPolynomial(60)
+	var kzgIcicle iciclecore.DeviceSlice
+	(iciclecore.HostSlice[bn254.G1Affine])(testSrs.Pk.G1).CopyToDevice(&kzgIcicle, true)
+
+	// commit the polynomial
+	digest, err := Commit(f, testSrs.Pk)
+	if err != nil {
+		t.Fatal(err)
+	}
+	icicle_digest := IcicleCommit(f, kzgIcicle)
+	fmt.Println("icicle digest",icicle_digest)
+	fmt.Println("gnark digest",digest)
+	if digest != icicle_digest {
+		t.Fatal("commits not equal")
+	}
+}
+
 
 func TestToLagrangeG1(t *testing.T) {
 	assert := require.New(t)
@@ -202,7 +227,6 @@ func TestVerifySinglePoint(t *testing.T) {
 
 	// create a polynomial
 	f := randomPolynomial(60)
-
 	// commit the polynomial
 	digest, err := Commit(f, testSrs.Pk)
 	if err != nil {
@@ -212,7 +236,9 @@ func TestVerifySinglePoint(t *testing.T) {
 	// compute opening proof at a random point
 	var point fr.Element
 	point.SetString("4321")
-	proof, err := Open(f, point, testSrs.Pk)
+	var pk_device iciclecore.DeviceSlice
+    (iciclecore.HostSlice[bn254.G1Affine])(testSrs.Pk.G1).CopyToDevice(&pk_device, true)
+	proof, err := Open(f, point,pk_device)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -272,7 +298,9 @@ func TestVerifySinglePointQuickSRS(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	proof, err := Open(p, x, srs.Pk)
+	var pk_device iciclecore.DeviceSlice
+    (iciclecore.HostSlice[bn254.G1Affine])(testSrs.Pk.G1).CopyToDevice(&pk_device, true)
+	proof, err := Open(p, x,pk_device)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -313,14 +341,17 @@ func TestBatchVerifySinglePoint(t *testing.T) {
 	// compute opening proof at a random point
 	var point fr.Element
 	point.SetString("4321")
-	proof, err := BatchOpenSinglePoint(f, digests, point, hf, testSrs.Pk)
+	var pk_device iciclecore.DeviceSlice
+    (iciclecore.HostSlice[bn254.G1Affine])(testSrs.Pk.G1).CopyToDevice(&pk_device, true)
+	proof, err := BatchOpenSinglePoint(f, digests, point, hf, pk_device)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	var salt fr.Element
 	salt.SetRandom()
-	proofExtendedTranscript, err := BatchOpenSinglePoint(f, digests, point, hf, testSrs.Pk, salt.Marshal())
+	
+	proofExtendedTranscript, err := BatchOpenSinglePoint(f, digests, point, hf, pk_device, salt.Marshal())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -386,9 +417,11 @@ func TestBatchVerifyMultiPoints(t *testing.T) {
 	points := make([]fr.Element, 2)
 	batchProofs := make([]BatchOpeningProof, 2)
 	points[0].SetRandom()
-	batchProofs[0], _ = BatchOpenSinglePoint(f[:5], digests[:5], points[0], hf, testSrs.Pk)
+	var pk_device iciclecore.DeviceSlice
+    (iciclecore.HostSlice[bn254.G1Affine])(testSrs.Pk.G1).CopyToDevice(&pk_device, true)
+	batchProofs[0], _ = BatchOpenSinglePoint(f[:5], digests[:5], points[0], hf, pk_device)
 	points[1].SetRandom()
-	batchProofs[1], _ = BatchOpenSinglePoint(f[5:], digests[5:], points[1], hf, testSrs.Pk)
+	batchProofs[1], _ = BatchOpenSinglePoint(f[5:], digests[5:], points[1], hf, pk_device)
 
 	// fold the 2 batch opening proofs
 	proofs := make([]OpeningProof, 2)
@@ -547,7 +580,9 @@ func BenchmarkKZGOpen(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		_, _ = Open(p, r, srs.Pk)
+		var pk_device iciclecore.DeviceSlice
+    (iciclecore.HostSlice[bn254.G1Affine])(srs.Pk.G1).CopyToDevice(&pk_device, true)
+		_, _ = Open(p, r, pk_device)
 	}
 }
 
@@ -565,7 +600,9 @@ func BenchmarkKZGVerify(b *testing.B) {
 	assert.NoError(b, err)
 
 	// open
-	openingProof, err := Open(p, r, srs.Pk)
+	var pk_device iciclecore.DeviceSlice
+    (iciclecore.HostSlice[bn254.G1Affine])(testSrs.Pk.G1).CopyToDevice(&pk_device, true)
+	openingProof, err := Open(p, r, pk_device)
 	assert.NoError(b, err)
 
 	b.ResetTimer()
@@ -598,7 +635,9 @@ func BenchmarkKZGBatchOpen10(b *testing.B) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		BatchOpenSinglePoint(ps[:], commitments[:], r, hf, srs.Pk)
+		var pk_device iciclecore.DeviceSlice
+    (iciclecore.HostSlice[bn254.G1Affine])(testSrs.Pk.G1).CopyToDevice(&pk_device, true)
+		BatchOpenSinglePoint(ps[:], commitments[:], r, hf, pk_device)
 	}
 }
 
@@ -626,7 +665,9 @@ func BenchmarkKZGBatchVerify10(b *testing.B) {
 	var r fr.Element
 	r.SetRandom()
 
-	proof, err := BatchOpenSinglePoint(ps[:], commitments[:], r, hf, srs.Pk)
+	var pk_device iciclecore.DeviceSlice
+    (iciclecore.HostSlice[bn254.G1Affine])(testSrs.Pk.G1).CopyToDevice(&pk_device, true)
+	proof, err := BatchOpenSinglePoint(ps[:], commitments[:], r, hf, pk_device)
 	if err != nil {
 		b.Fatal(err)
 	}
